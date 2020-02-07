@@ -27,20 +27,19 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
 
         public async Task Invoke(HttpContext context)
         {
-            SetRequestId(context.Request);
+            var requestId = SetRequestId(context.Request);
 
-            var sw = new Stopwatch();
-            sw.Start();
-            var request = context.Request;
+            var sw = Stopwatch.StartNew();
             var details = new JObject
             {
-                { "requestId", request.GetRequestId() },
-                { "method", request.Method.ToString() },
-                { "uri", request.Path.ToString() }
+                { "requestId", requestId },
+                { "method", context.Request.Method },
+                { "userAgent", context.Request.GetHeaderValueOrDefault("User-Agent") },
+                { "uri", context.Request.Path.ToString() }
             };
             var logData = new Dictionary<string, object>
             {
-                [ScriptConstants.LogPropertyActivityIdKey] = request.GetRequestId()
+                [ScriptConstants.LogPropertyActivityIdKey] = requestId
             };
             _logger.Log(LogLevel.Information, 0, logData, null, (s, e) => $"Executing HTTP request: {details}");
 
@@ -50,35 +49,43 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Middleware
             details["identities"] = GetIdentities(context);
             details["status"] = context.Response.StatusCode;
             details["duration"] = sw.ElapsedMilliseconds;
+
             _logger.Log(LogLevel.Information, 0, logData, null, (s, e) => $"Executed HTTP request: {details}");
         }
 
-        internal static void SetRequestId(HttpRequest request)
+        internal static string SetRequestId(HttpRequest request)
         {
             string requestID = request.GetHeaderValueOrDefault(ScriptConstants.AntaresLogIdHeaderName) ?? Guid.NewGuid().ToString();
             request.HttpContext.Items[ScriptConstants.AzureFunctionsRequestIdKey] = requestID;
+            return requestID;
         }
 
         private static JArray GetIdentities(HttpContext context)
         {
-            JArray identities = new JArray();
-            foreach (var identity in context.User.Identities.Where(p => p.IsAuthenticated))
+            JArray result = null;
+
+            var identities = context.User.Identities.Where(p => p.IsAuthenticated);
+            if (identities.Any())
             {
-                var formattedIdentity = new JObject
+                result = new JArray();
+                foreach (var identity in identities)
                 {
-                    { "type", identity.AuthenticationType }
-                };
+                    var formattedIdentity = new JObject
+                    {
+                        { "type", identity.AuthenticationType }
+                    };
 
-                var claim = identity.Claims.FirstOrDefault(p => p.Type == SecurityConstants.AuthLevelClaimType);
-                if (claim != null)
-                {
-                    formattedIdentity.Add("level", claim.Value);
+                    var claim = identity.Claims.FirstOrDefault(p => p.Type == SecurityConstants.AuthLevelClaimType);
+                    if (claim != null)
+                    {
+                        formattedIdentity.Add("level", claim.Value);
+                    }
+
+                    result.Add(formattedIdentity);
                 }
-
-                identities.Add(formattedIdentity);
             }
 
-            return identities;
+            return result;
         }
     }
 }

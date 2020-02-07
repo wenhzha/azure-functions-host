@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -28,6 +29,7 @@ namespace Microsoft.Azure.WebJobs.Script
         private ImmutableArray<FunctionMetadata> _functionMetadataArray;
         private IEnumerable<IFunctionProvider> _functionProviders;
         private Dictionary<string, ICollection<string>> _functionErrors = new Dictionary<string, ICollection<string>>();
+        private ConcurrentDictionary<string, FunctionMetadata> _functionMetadataMap = new ConcurrentDictionary<string, FunctionMetadata>(StringComparer.OrdinalIgnoreCase);
 
         public FunctionMetadataManager(IOptions<ScriptJobHostOptions> scriptOptions, IFunctionMetadataProvider functionMetadataProvider,
             IEnumerable<IFunctionProvider> functionProviders, IOptions<HttpWorkerOptions> httpWorkerOptions, IScriptHostManager scriptHostManager, ILoggerFactory loggerFactory)
@@ -46,6 +48,22 @@ namespace Microsoft.Azure.WebJobs.Script
         }
 
         public ImmutableDictionary<string, ImmutableArray<string>> Errors { get; private set; }
+
+        public bool TryGetFunctionMetadata(string functionName, out FunctionMetadata functionMetadata, bool forceRefresh)
+        {
+            if (forceRefresh)
+            {
+                _functionMetadataMap.Clear();
+            }
+
+            functionMetadata = _functionMetadataMap.GetOrAdd(functionName, s =>
+            {
+                var functions = GetFunctionMetadata(false);
+                return functions.FirstOrDefault(p => Utility.FunctionNamesMatch(p.Name, s));
+            });
+
+            return functionMetadata != null;
+        }
 
         /// <summary>
         /// Gets the function metadata array from all providers.
@@ -79,6 +97,8 @@ namespace Microsoft.Azure.WebJobs.Script
 
         private void InitializeServices()
         {
+            _functionMetadataMap.Clear();
+
             _functionProviders = _serviceProvider.GetService<IEnumerable<IFunctionProvider>>();
             _isHttpWorker = _serviceProvider.GetService<IOptions<HttpWorkerOptions>>()?.Value?.Description != null;
             _scriptOptions = _serviceProvider.GetService<IOptions<ScriptJobHostOptions>>();
@@ -94,6 +114,8 @@ namespace Microsoft.Azure.WebJobs.Script
         /// </summary>
         internal ImmutableArray<FunctionMetadata> LoadFunctionMetadata(bool forceRefresh = false)
         {
+            _functionMetadataMap.Clear();
+
             ICollection<string> functionsWhiteList = _scriptOptions?.Value?.Functions;
             _logger.FunctionMetadataManagerLoadingFunctionsMetadata();
 
