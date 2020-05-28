@@ -29,6 +29,11 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
         public string WorkerDirectory { get; set; }
 
         /// <summary>
+        /// Gets or sets WorkingDirectory for the process: DefaultExecutablePath
+        /// </summary>
+        public string WorkingDirectory { get; set; }
+
+        /// <summary>
         /// Gets or sets the command line args to pass to the worker. Will be appended after DefaultExecutablePath but before DefaultWorkerPath
         /// </summary>
         public List<string> Arguments { get; set; }

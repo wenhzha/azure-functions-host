@@ -21,6 +21,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
             WorkerArguments = WorkerArguments ?? new List<string>();
 
             WorkerDirectory = WorkerDirectory ?? workerDirectory;
+            WorkingDirectory = WorkingDirectory ?? workerDirectory;
 
             ExpandEnvironmentVariables();
 

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.Azure.WebJobs.Script.Eventing;
 using Microsoft.Extensions.Logging;
 using Mono.Unix;
@@ -49,7 +50,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
                 RequestId = Guid.NewGuid().ToString(),
                 WorkerId = _workerId,
                 Arguments = _workerProcessArguments,
-                WorkingDirectory = _scriptRootPath,
+                WorkingDirectory = _httpWorkerOptions.Description.WorkingDirectory,
                 Port = _httpWorkerOptions.Port
             };
             AddEnvironmentVariablesAndExpandExecutableArguments(ref workerContext, HttpWorkerConstants.PortEnvVarName, _httpWorkerOptions.Port.ToString());
@@ -65,19 +66,17 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
         internal void AddEnvironmentVariablesAndExpandExecutableArguments(ref HttpWorkerContext workerContext, string key, string value)
         {
             workerContext.EnvironmentVariables.Add(key, value);
-            var workerArgsWithExpandedEnvVars = new List<string>();
-            foreach (string argument in workerContext.Arguments.WorkerArguments)
-            {
-                workerArgsWithExpandedEnvVars.Add(argument.Replace($"%{key}%", value));
-            }
-            workerContext.Arguments.WorkerArguments = workerArgsWithExpandedEnvVars;
+            workerContext.Arguments.ExecutableArguments = ExpandInjectEnvVars(workerContext.Arguments.ExecutableArguments, key, value);
+            workerContext.Arguments.WorkerArguments = ExpandInjectEnvVars(workerContext.Arguments.WorkerArguments, key, value);
+        }
 
-            var exeArgsWithExpandedEnvVars = new List<string>();
-            foreach (string argument in workerContext.Arguments.ExecutableArguments)
+        private static List<string> ExpandInjectEnvVars(List<string> argsList, string key, string value)
+        {
+            for (int i = 0; i < argsList.Count; i++)
             {
-                exeArgsWithExpandedEnvVars.Add(argument.Replace($"%{key}%", value));
+                argsList[i] = argsList[i].Replace($"%{key}%", value);
             }
-            workerContext.Arguments.ExecutableArguments = exeArgsWithExpandedEnvVars;
+            return argsList;
         }
 
         private void AssignUserExecutePermissionsIfNotExists(string filePath)

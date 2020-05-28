@@ -31,6 +31,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Http
         {
             _httpWorkerOptions = new HttpWorkerOptions()
             {
+                Description = new HttpWorkerDescription()
+                {
+                    WorkingDirectory = "rootPath"
+                },
                 Port = _workerPort,
                 Arguments = new WorkerProcessArguments() { ExecutablePath = "test", WorkerArguments = new List<string>() { $"%{HttpWorkerConstants.PortEnvVarName}%" }, ExecutableArguments = new List<string>() { $"%{HttpWorkerConstants.WorkerIdEnvVarName}%" } }
             };

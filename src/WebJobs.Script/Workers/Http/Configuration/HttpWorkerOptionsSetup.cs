@@ -32,24 +32,41 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
         {
             IConfigurationSection jobHostSection = _configuration.GetSection(ConfigurationSectionNames.JobHost);
             var httpWorkerSection = jobHostSection.GetSection(ConfigurationSectionNames.HttpWorker);
+            var customHandlerSection = jobHostSection.GetSection(ConfigurationSectionNames.CustomHandler);
 
-            if (httpWorkerSection.Exists())
+            if (httpWorkerSection.Exists() && customHandlerSection.Exists())
             {
-                httpWorkerSection.Bind(options);
+                throw new HostConfigurationException($"Specifying both {ConfigurationSectionNames.HttpWorker} and {ConfigurationSectionNames.CustomHandler} in {ScriptConstants.HostMetadataFileName} file is not supported.");
+            }
+
+            if (customHandlerSection.Exists())
+            {
+                ConfigureOptionsHelper(options, customHandlerSection);
+                return;
+            }
+
+            ConfigureOptionsHelper(options, httpWorkerSection);
+        }
+
+        private void ConfigureOptionsHelper(HttpWorkerOptions options, IConfigurationSection workerSection)
+        {
+            if (workerSection.Exists())
+            {
+                workerSection.Bind(options);
                 HttpWorkerDescription httpWorkerDescription = options.Description;
 
                 if (httpWorkerDescription == null)
                 {
-                    throw new HostConfigurationException($"Missing WorkerDescription for HttpWorker");
+                    throw new HostConfigurationException($"Missing WorkerDescription");
                 }
 
-                var argumentsList = GetArgumentList(httpWorkerSection, argumentsSectionName);
+                var argumentsList = GetArgumentList(workerSection, argumentsSectionName);
                 if (argumentsList != null)
                 {
                     httpWorkerDescription.Arguments = argumentsList;
                 }
 
-                var workerArgumentList = GetArgumentList(httpWorkerSection, workerArgumentsSectionName);
+                var workerArgumentList = GetArgumentList(workerSection, workerArgumentsSectionName);
                 if (workerArgumentList != null)
                 {
                     httpWorkerDescription.WorkerArguments = workerArgumentList;
@@ -64,7 +81,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
 
                 options.Arguments.ExecutableArguments.AddRange(options.Description.Arguments);
                 options.Port = GetUnusedTcpPort();
-                _logger.LogDebug("Configured httpWorker with {DefaultExecutablePath}: {exepath} with arguments {args}", nameof(options.Description.DefaultExecutablePath), options.Description.DefaultExecutablePath, options.Arguments);
             }
         }
 
