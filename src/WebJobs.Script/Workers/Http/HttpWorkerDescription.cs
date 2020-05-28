@@ -25,20 +25,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
 
             ExpandEnvironmentVariables();
 
-            // If DefaultWorkerPath is not set then compute full path for DefaultExecutablePath from scriptRootDir
-            if (string.IsNullOrEmpty(DefaultWorkerPath) && !string.IsNullOrEmpty(DefaultExecutablePath) && !Path.IsPathRooted(DefaultExecutablePath))
-            {
-                DefaultExecutablePath = Path.Combine(workerDirectory, DefaultExecutablePath);
-                ThrowIfFileNotExists(DefaultExecutablePath, nameof(DefaultExecutablePath));
-            }
-
-            // If DefaultWorkerPath is set and find full path from scriptRootDir
-            if (!string.IsNullOrEmpty(DefaultWorkerPath) && !Path.IsPathRooted(DefaultWorkerPath))
-            {
-                DefaultWorkerPath = Path.Combine(WorkerDirectory, DefaultWorkerPath);
-                ThrowIfFileNotExists(DefaultWorkerPath, nameof(DefaultWorkerPath));
-            }
-
             if (string.IsNullOrEmpty(DefaultExecutablePath))
             {
                 throw new ValidationException($"WorkerDescription {nameof(DefaultExecutablePath)} cannot be empty");
