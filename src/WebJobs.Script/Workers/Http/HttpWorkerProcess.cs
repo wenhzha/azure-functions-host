@@ -53,21 +53,14 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
                 WorkingDirectory = _httpWorkerOptions.Description.WorkingDirectory,
                 Port = _httpWorkerOptions.Port
             };
-            AddEnvironmentVariablesAndExpandExecutableArguments(ref workerContext, HttpWorkerConstants.PortEnvVarName, _httpWorkerOptions.Port.ToString());
-            AddEnvironmentVariablesAndExpandExecutableArguments(ref workerContext, HttpWorkerConstants.WorkerIdEnvVarName, _workerId);
+            workerContext.EnvironmentVariables.Add(HttpWorkerConstants.PortEnvVarName, _httpWorkerOptions.Port.ToString());
+            workerContext.EnvironmentVariables.Add(HttpWorkerConstants.WorkerIdEnvVarName, _workerId);
             Process workerProcess = _processFactory.CreateWorkerProcess(workerContext);
             if (_environment.IsLinuxConsumption())
             {
                 AssignUserExecutePermissionsIfNotExists(workerProcess.StartInfo.FileName);
             }
             return workerProcess;
-        }
-
-        internal void AddEnvironmentVariablesAndExpandExecutableArguments(ref HttpWorkerContext workerContext, string key, string value)
-        {
-            workerContext.EnvironmentVariables.Add(key, value);
-            workerContext.Arguments.ExecutableArguments = ExpandInjectEnvVars(workerContext.Arguments.ExecutableArguments, key, value);
-            workerContext.Arguments.WorkerArguments = ExpandInjectEnvVars(workerContext.Arguments.WorkerArguments, key, value);
         }
 
         private static List<string> ExpandInjectEnvVars(List<string> argsList, string key, string value)

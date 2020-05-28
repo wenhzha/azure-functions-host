@@ -25,6 +25,14 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Http
 
             ExpandEnvironmentVariables();
 
+            // If DefaultWorkerPath is not set then compute full path for DefaultExecutablePath from WorkingDirectory.
+            // Empty DefaultWorkerPath indicates DefaultExecutablePath is either a runtime on the system path or a file relative to WorkingDirectory.
+            // No need to find full path for DefaultWorkerPath as WorkingDirectory will be set when launching the worker process.
+            if (string.IsNullOrEmpty(DefaultWorkerPath) && !string.IsNullOrEmpty(DefaultExecutablePath) && !Path.IsPathRooted(DefaultExecutablePath))
+            {
+                DefaultExecutablePath = Path.Combine(WorkingDirectory, DefaultExecutablePath);
+            }
+
             if (string.IsNullOrEmpty(DefaultExecutablePath))
             {
                 throw new ValidationException($"WorkerDescription {nameof(DefaultExecutablePath)} cannot be empty");

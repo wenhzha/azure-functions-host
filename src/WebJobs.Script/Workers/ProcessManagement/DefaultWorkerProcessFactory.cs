@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             {
                 throw new ArgumentNullException(nameof(context.Arguments.ExecutablePath));
             }
-            var startInfo = new ProcessStartInfo(context.Arguments.ExecutablePath)
+            var startInfo = new ProcessStartInfo(Environment.ExpandEnvironmentVariables(context.Arguments.ExecutablePath))
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -46,7 +47,11 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             return new Process { StartInfo = startInfo };
         }
 
-        private StringBuilder MergeArguments(StringBuilder builder, string arg) => builder.AppendFormat(" {0}", arg);
+        private StringBuilder MergeArguments(StringBuilder builder, string arg)
+        {
+            string expandedArg = Environment.ExpandEnvironmentVariables(arg);
+            return builder.AppendFormat(" {0}", expandedArg);
+        }
 
         public string GetArguments(WorkerContext context)
         {

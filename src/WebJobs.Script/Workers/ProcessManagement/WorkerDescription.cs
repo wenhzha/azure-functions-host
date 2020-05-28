@@ -59,20 +59,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
 
         internal void ExpandEnvironmentVariables()
         {
-            var exeArgsWithExpandedEnvVars = new List<string>();
-            foreach (string argument in Arguments)
-            {
-                exeArgsWithExpandedEnvVars.Add(Environment.ExpandEnvironmentVariables(argument));
-            }
-            Arguments = exeArgsWithExpandedEnvVars;
-
-            var workerArgsWithExpandedEnvVars = new List<string>();
-            foreach (string argument in WorkerArguments)
-            {
-                workerArgsWithExpandedEnvVars.Add(Environment.ExpandEnvironmentVariables(argument));
-            }
-            WorkerArguments = workerArgsWithExpandedEnvVars;
-
             if (DefaultWorkerPath != null)
             {
                 DefaultWorkerPath = Environment.ExpandEnvironmentVariables(DefaultWorkerPath);
